@@ -158,7 +158,7 @@ go run main.go
 
 ```bash
 # プロジェクトルートで実行
-cd /Users/isurugi_k/dev/private/go/go-demo
+cd ../dev/private/go/go-demo
 
 # PostgreSQLコンテナ起動
 docker compose up -d db

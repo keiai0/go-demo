@@ -21,7 +21,7 @@
 
 ```bash
 # プロジェクトルートから実行
-cd /Users/isurugi_k/dev/private/go/go-demo
+cd ../dev/private/go/go-demo
 
 # Dockerコンテナ起動
 docker compose up -d db
