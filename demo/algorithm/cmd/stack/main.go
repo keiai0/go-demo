@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/keito-isurugi/go-demo/demo/algorithm"
+	"github.com/keiai0/go-demo/demo/algorithm"
 )
 
 func main() {

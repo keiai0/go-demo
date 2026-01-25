@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/keito-isurugi/go-demo/demo/algorithm"
+	"github.com/keiai0/go-demo/demo/algorithm"
 )
 
 func AlgorithmDemoHandler(w http.ResponseWriter, r *http.Request) {

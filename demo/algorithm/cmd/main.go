@@ -1,7 +1,7 @@
 package main
 
 import (
-	algorithm "github.com/keito-isurugi/go-demo/demo/algorithm"
+	algorithm "github.com/keiai0/go-demo/demo/algorithm"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-module github.com/keito-isurugi/go-demo
+module github.com/keiai0/go-demo
 
 go 1.25
 
@@ -6,7 +6,7 @@ toolchain go1.25.0
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/keito-isurugi/go-demo/demo/algorithm v0.0.0-00010101000000-000000000000
+	github.com/keiai0/go-demo/demo/algorithm v0.0.0-00010101000000-000000000000
 	github.com/redis/go-redis/v9 v9.14.1
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
@@ -14,7 +14,7 @@ require (
 	gorm.io/gorm v1.25.9
 )
 
-replace github.com/keito-isurugi/go-demo/demo/algorithm => ./demo/algorithm
+replace github.com/keiai0/go-demo/demo/algorithm => ./demo/algorithm
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/keito-isurugi/go-demo/demo/time"
+	demo "github.com/keiai0/go-demo/demo/time"
 )
 
 func TimeDemoHandler(w http.ResponseWriter, r *http.Request) {

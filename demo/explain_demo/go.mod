@@ -1,4 +1,4 @@
-module github.com/keito-isurugi/go-demo/demo/explain_demo
+module github.com/keiai0/go-demo/demo/explain_demo
 
 go 1.23.0
 

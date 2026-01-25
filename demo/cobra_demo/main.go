@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/keito-isurugi/go-demo/demo/cobra_demo/cmd"
+import "github.com/keiai0/go-demo/demo/cobra_demo/cmd"
 
 func main() {
 	cmd.Execute()

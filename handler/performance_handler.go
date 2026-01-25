@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"github.com/keito-isurugi/go-demo/demo"
+	"github.com/keiai0/go-demo/demo"
 )
 
 func PerformanceHandler(w http.ResponseWriter, r *http.Request) {
@@ -19,4 +19,4 @@ func PerformanceProfHandler(w http.ResponseWriter, r *http.Request) {
 func PerformanceTraceHandler(w http.ResponseWriter, r *http.Request) {
 	demo.PerformanceTraceDemo()
 	_, _ = w.Write([]byte("performance comparison!"))
-} 
+}
