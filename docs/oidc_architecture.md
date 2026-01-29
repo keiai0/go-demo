@@ -21,33 +21,35 @@ sequenceDiagram
     participant OP as OP（OpenIDプロバイダ）
     participant RS as Resource Server（リソースサーバー）
 
-    Note over RP: state, nonce を生成<br/>セッションに保存
+    Note over RP: state, nonce, code_verifier を生成<br/>セッションに保存<br/>code_challenge を計算
 
     User->>RP: 1. ログインボタンをクリック
-    RP->>User: 2. OPの認証エンドポイントへリダイレクト<br/>response_type=code<br/>scope=openid profile email<br/>state=xxx&nonce=yyy
+    RP->>User: 2. OPへリダイレクト<br/>response_type=code<br/>scope=openid profile email<br/>state=xxx&nonce=yyy<br/>code_challenge=zzz
 
     User->>OP: 3. 認証画面にアクセス
     OP->>User: 4. ID/PW入力画面を表示
     User->>OP: 5. 認証情報を送信
-    OP->>OP: 6. 認証・認可の処理
+    OP->>OP: 6. 認証成功<br/>OP認証セッションを作成
 
     OP->>User: 7. RPのコールバックURLへリダイレクト<br/>code=AUTH_CODE&state=xxx
     User->>RP: 8. コールバック受信
 
-    Note over RP: 【検証A】state の検証<br/>セッションのstate == パラメータのstate
+    Note over RP: 【検証A】state の検証
 
-    RP->>OP: 9. トークンリクエスト（サーバー間通信）<br/>code=AUTH_CODE<br/>client_id + client_secret
-    OP->>RP: 10. トークンレスポンス<br/>IDトークン + アクセストークン + リフレッシュトークン
+    RP->>OP: 9. トークンリクエスト（サーバー間通信）<br/>code=AUTH_CODE<br/>code_verifier<br/>client_id + client_secret
+    OP->>OP: 10. PKCE検証<br/>code_verifier → code_challenge一致？
+
+    OP->>RP: 11. トークンレスポンス<br/>IDトークン + アクセストークン + リフレッシュトークン
 
     Note over RP: 【検証B】IDトークンの検証<br/>署名・iss・aud・exp・nonce
 
-    RP->>RP: 11. RPセッションを作成<br/>（ユーザー情報をセッションに保存）
-    RP->>User: 12. ログイン完了（セッションCookie発行）
+    RP->>RP: 12. RPセッションを作成
+    RP->>User: 13. セッションCookie発行
 
-    User->>RP: 13. リソースへのリクエスト（セッションCookie）
-    RP->>RS: 14. APIリクエスト（アクセストークン付き）
-    RS->>RP: 15. リソースを返却
-    RP->>User: 16. レスポンスを返却
+    User->>RP: 14. リソース要求（セッションCookie）
+    RP->>RS: 15. APIリクエスト（アクセストークン）
+    RS->>RP: 16. リソース返却
+    RP->>User: 17. レスポンス返却
 ```
 
 ### 認可コードフロー + PKCE（SPA / モバイルアプリ向け）
@@ -103,19 +105,8 @@ sequenceDiagram
 
 ### 根本的な違い：「認可」vs「認証 + 認可」
 
-```mermaid
-flowchart TB
-    subgraph OIDC["OIDC"]
-        direction TB
-        Authentication["認証（Authentication）<br/>ユーザーの身元確認<br/>「誰であるか」"]
-        subgraph OAuth2["OAuth 2.0"]
-            Authorization["認可（Authorization）<br/>リソースへのアクセス許可<br/>「何ができるか」"]
-        end
-    end
-
-    style OIDC fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
-    style OAuth2 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-```
+- **OAuth 2.0** = 認可（Authorization）：リソースへのアクセス許可。「何ができるか」
+- **OIDC** = 認証（Authentication）+ 認可：ユーザーの身元確認 + アクセス許可。「誰であるか」+「何ができるか」
 
 OIDCはOAuth 2.0を**包含する上位プロトコル**です。OAuth 2.0の仕組みをそのまま使いながら、認証のための標準仕様を追加しています。
 
@@ -134,18 +125,12 @@ OIDCはOAuth 2.0を**包含する上位プロトコル**です。OAuth 2.0の仕
 
 ### OIDCが追加したもの
 
-```mermaid
-flowchart LR
-    subgraph Added["OIDCが追加した主要要素"]
-        direction TB
-        A1["IDトークン（JWT）<br/>ユーザー認証情報の標準化"]
-        A2["UserInfoエンドポイント<br/>追加のユーザー属性を取得"]
-        A3["ディスカバリ<br/>.well-known/openid-configuration"]
-        A4["scope: openid<br/>OIDCフローの起動トリガー"]
-        A5["nonce パラメータ<br/>リプレイ攻撃対策"]
-        A6["JWKSエンドポイント<br/>署名検証用公開鍵の提供"]
-    end
-```
+- **IDトークン（JWT）** — ユーザー認証情報の標準化
+- **UserInfoエンドポイント** — 追加のユーザー属性を取得
+- **ディスカバリ** — `.well-known/openid-configuration` でOP情報を自動取得
+- **scope: openid** — OIDCフローの起動トリガー
+- **nonce パラメータ** — リプレイ攻撃対策
+- **JWKSエンドポイント** — 署名検証用公開鍵の提供
 
 ### OAuth 2.0だけで「認証」すると何が危険か
 
@@ -189,34 +174,20 @@ sequenceDiagram
 
 ### 各コンポーネントの責務
 
-```mermaid
-flowchart TB
-    User["ユーザー（ブラウザ）"]
+```
+ユーザー（ブラウザ）
+  ├──[セッションCookie]──→ RP（リライングパーティ）= あなたのアプリ
+  │                          ├── RPセッション
+  │                          └── ビジネスロジック
+  │
+  └──[認証画面 / OPセッションCookie]──→ OP（OpenIDプロバイダ）= Google / Entra ID 等
+                                          ├── OPセッション
+                                          ├── 認証エンジン
+                                          └── トークン発行
 
-    subgraph RP_Box["RP（リライングパーティ）= あなたのアプリ"]
-        RP_Session["RPセッション"]
-        RP_Logic["ビジネスロジック"]
-    end
-
-    subgraph OP_Box["OP（OpenIDプロバイダ）= Google / Entra ID 等"]
-        OP_Session["OPセッション"]
-        OP_Auth["認証エンジン"]
-        OP_Token["トークン発行"]
-    end
-
-    subgraph RS_Box["Resource Server（リソースサーバー）= API"]
-        RS_Data["保護されたリソース"]
-        RS_Validate["トークン検証"]
-    end
-
-    User <-->|"セッションCookie"| RP_Box
-    User <-->|"認証画面<br/>（OPセッションCookie）"| OP_Box
-    RP_Box -->|"アクセストークン"| RS_Box
-    OP_Box -->|"IDトークン<br/>アクセストークン"| RP_Box
-
-    style RP_Box fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    style OP_Box fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style RS_Box fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+OP ──[IDトークン / アクセストークン]──→ RP ──[アクセストークン]──→ Resource Server（API）
+                                                                      ├── 保護されたリソース
+                                                                      └── トークン検証
 ```
 
 ### 各コンポーネントの詳細
@@ -249,32 +220,19 @@ flowchart TB
 
 認証フロー全体には**3つの独立したセッション**が存在します。
 
-```mermaid
-flowchart TB
-    subgraph Browser["ユーザーのブラウザ"]
-        Cookie_RP["RPセッションCookie<br/>例: session_id=abc123"]
-        Cookie_OP["OPセッションCookie<br/>例: SSID=xyz789"]
-    end
+**ユーザーのブラウザが持つもの：**
+- RPセッションCookie（例: `session_id=abc123`） → 毎リクエストでRPサーバーに送信
+- OPセッションCookie（例: `SSID=xyz789`） → OPアクセス時に送信
 
-    subgraph RP_Server["RPサーバー"]
-        RP_Store["セッションストア"]
-        RP_Session_Data["セッションデータ:<br/>- user_id<br/>- user_name<br/>- email<br/>- access_token<br/>- refresh_token<br/>- ログイン時刻"]
-    end
+**RPサーバーのセッションストア：**
+- user_id, user_name, email
+- access_token, refresh_token
+- ログイン時刻
 
-    subgraph OP_Server["OPサーバー"]
-        OP_Store["セッションストア"]
-        OP_Session_Data["セッションデータ:<br/>- 認証済みユーザーID<br/>- 認証時刻<br/>- 認証方法（MFA等）"]
-    end
-
-    Cookie_RP -->|"毎リクエスト送信"| RP_Store
-    RP_Store --- RP_Session_Data
-    Cookie_OP -->|"OPアクセス時に送信"| OP_Store
-    OP_Store --- OP_Session_Data
-
-    style Browser fill:#fce4ec,stroke:#c62828,stroke-width:2px
-    style RP_Server fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    style OP_Server fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-```
+**OPサーバーのセッションストア：**
+- 認証済みユーザーID
+- 認証時刻
+- 認証方法（MFA等）
 
 #### セッション比較表
 
@@ -336,35 +294,13 @@ sequenceDiagram
 
 ### 各コンポーネントが保持するトークンと情報の整理
 
-```mermaid
-flowchart LR
-    subgraph OP["OP（OpenIDプロバイダ）"]
-        direction TB
-        OP_Has["保持するもの:<br/>・ユーザー認証情報<br/>・署名用秘密鍵<br/>・クライアント登録情報"]
-        OP_Issues["発行するもの:<br/>・IDトークン（JWT）<br/>・アクセストークン<br/>・リフレッシュトークン"]
-    end
+| コンポーネント | 保持するもの | 行うこと |
+|--------------|------------|---------|
+| **OP（OpenIDプロバイダ）** | ユーザー認証情報、署名用秘密鍵、クライアント登録情報 | IDトークン（JWT）・アクセストークン・リフレッシュトークンの発行 |
+| **RP（リライングパーティ）** | client_id / client_secret、アクセストークン、リフレッシュトークン、ユーザー情報（セッション内） | IDトークンの検証、セッション管理、RSへのAPIコール |
+| **Resource Server** | 保護リソース、OPの公開鍵（JWKS） | アクセストークン検証、スコープに基づくアクセス制御 |
 
-    subgraph RP["RP（リライングパーティ）"]
-        direction TB
-        RP_Has["保持するもの:<br/>・client_id / client_secret<br/>・アクセストークン<br/>・リフレッシュトークン<br/>・ユーザー情報（セッション内）"]
-        RP_Does["行うこと:<br/>・IDトークンの検証<br/>・セッション管理<br/>・RSへのAPIコール"]
-    end
-
-    subgraph RS["Resource Server"]
-        direction TB
-        RS_Has["保持するもの:<br/>・保護リソース<br/>・OPの公開鍵（JWKS）"]
-        RS_Does["行うこと:<br/>・アクセストークン検証<br/>・スコープに基づくアクセス制御"]
-    end
-
-    OP -->|"IDトークン<br/>（認証情報）"| RP
-    OP -->|"アクセストークン<br/>（認可情報）"| RP
-    RP -->|"アクセストークン<br/>（Bearer）"| RS
-    OP -.->|"公開鍵（JWKS）"| RS
-
-    style OP fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style RP fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    style RS fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-```
+**トークンの流れ：** OP →（IDトークン + アクセストークン）→ RP →（アクセストークン）→ Resource Server
 
 ### よくある誤解と注意点
 
